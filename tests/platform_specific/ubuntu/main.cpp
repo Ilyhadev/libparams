@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include "flash_driver.h"
+#include "platform_flash_driver.h"
 #include "libparams_error_codes.h"
 #include "params.hpp"
 
@@ -16,7 +17,7 @@ extern uint8_t flash_memory[2048];
 
 
 int main (int argc, char *argv[]) {
-    paramsInit(IntParamsIndexes::INTEGER_PARAMS_AMOUNT, NUM_OF_STR_PARAMS, -1, 1);
+    paramsInit(ubuntuFlashGetOps(), IntParamsIndexes::INTEGER_PARAMS_AMOUNT, NUM_OF_STR_PARAMS, -1, 1);
     paramsLoad();
 
     std::cout << "Integer parameters:" << std::endl;

@@ -8,15 +8,17 @@
 
 #include "rom.h"
 #include "flash_driver.h"
+#include "platform_flash_driver.h"
 
 void test_flash_wr() {
-    RomDriverInstance rom = romInit(255, 1);
+    const FlashDriverOps* flash = stm32g0b1InternalFlashGetOps();
+    RomDriverInstance rom = romInit(flash, 255, 1);
 
     const uint8_t first_buf[2048];
-    romWrite(&rom, 0, first_buf, flashGetPageSize());
+    romWrite(&rom, 0, first_buf, flash->get_page_size());
 
     uint8_t second_buf[2048];
-    romRead(&rom, 0, second_buf, flashGetPageSize());
+    romRead(&rom, 0, second_buf, flash->get_page_size());
 }
 
 int main() {

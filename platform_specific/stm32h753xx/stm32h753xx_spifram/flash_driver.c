@@ -6,6 +6,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "flash_driver.h"
+#include "platform_flash_driver.h"
 #include <string.h>
 #include "libparams_error_codes.h"
 #include "main.h"
@@ -26,6 +27,15 @@
 #ifndef LIBPARAMS_SPIFRAM_CS_PIN
 #define LIBPARAMS_SPIFRAM_CS_PIN SPI5_NCS1_FRAM_Pin
 #endif
+
+static void flashInit(void);
+static int8_t flashErase(uint32_t start_page_idx, uint32_t num_of_pages);
+static int32_t flashWrite(const uint8_t* data, size_t offset, size_t bytes_to_write);
+static int8_t flashUnlock(void);
+static int8_t flashLock(void);
+static size_t flashRead(uint8_t* data, size_t offset, size_t bytes_to_read);
+static uint16_t flashGetNumberOfPages(void);
+static uint32_t flashGetPageSize(void);
 
 typedef enum {
     SPIFRAM_CMD_WREN  = 0x06U,  // Set Write Enable Latch
@@ -151,12 +161,12 @@ static int8_t spiframRead(uint16_t address, uint8_t* data, uint16_t size) {
     return res;
 }
 
-void flashInit() {
+static void flashInit(void) {
     spiframDeselect();
 }
 
 
-int8_t flashErase(uint32_t start_page_idx, uint32_t num_of_pages) {
+static int8_t flashErase(uint32_t start_page_idx, uint32_t num_of_pages) {
     if (num_of_pages == 0U || start_page_idx + num_of_pages > flashGetNumberOfPages()) {
         return LIBPARAMS_WRONG_ARGS;
     }
@@ -184,7 +194,7 @@ int8_t flashErase(uint32_t start_page_idx, uint32_t num_of_pages) {
 
 
 
-int32_t flashWrite(const uint8_t* data, size_t offset, size_t bytes_to_write) {
+static int32_t flashWrite(const uint8_t* data, size_t offset, size_t bytes_to_write) {
     if (data == NULL || bytes_to_write == 0U) {
         return LIBPARAMS_WRONG_ARGS;
     }
@@ -213,16 +223,16 @@ int32_t flashWrite(const uint8_t* data, size_t offset, size_t bytes_to_write) {
     return (int32_t)requested_size;
 }
 
-int8_t flashUnlock() {
+static int8_t flashUnlock(void) {
     return LIBPARAMS_OK;
 }
 
-int8_t flashLock() {
+static int8_t flashLock(void) {
     return LIBPARAMS_OK;
 }
 
 
-size_t flashRead(uint8_t* data, size_t offset, size_t bytes_to_read) {
+static size_t flashRead(uint8_t* data, size_t offset, size_t bytes_to_read) {
     if (data == NULL || bytes_to_read == 0U) {
         return 0;
     }
@@ -251,10 +261,25 @@ size_t flashRead(uint8_t* data, size_t offset, size_t bytes_to_read) {
     return bytes_to_read;
 }
 
-uint16_t flashGetNumberOfPages() {
+static uint16_t flashGetNumberOfPages(void) {
     // Only one page since whole memory can be accessed sequentially
     return 1;
 }
-uint32_t flashGetPageSize() {
+static uint32_t flashGetPageSize(void) {
     return FM25V02_SIZE_BYTES;
+}
+
+const FlashDriverOps* stm32h753xxSpiFramGetOps(void) {
+    static const FlashDriverOps ops = {
+        flashInit,
+        flashUnlock,
+        flashLock,
+        flashErase,
+        flashWrite,
+        flashRead,
+        flashGetNumberOfPages,
+        flashGetPageSize,
+        FLASH_START_ADDR,
+    };
+    return &ops;
 }

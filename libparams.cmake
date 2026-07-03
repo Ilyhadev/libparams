@@ -9,19 +9,32 @@ cmake_minimum_required(VERSION 3.22)
 if(LIBPARAMS_PLATFORM STREQUAL "stm32f103")
 elseif(LIBPARAMS_PLATFORM STREQUAL "stm32g0b1")
 elseif(LIBPARAMS_PLATFORM STREQUAL "stm32h753xx")
-elseif(LIBPARAMS_PLATFORM STREQUAL "stm32h753xx/stm32h753xx_spifram")
 elseif(LIBPARAMS_PLATFORM STREQUAL "ubuntu")
 else()
-  message(SEND_ERROR "LIBPARAMS_PLATFORM is not specified! Options: stm32f103, stm32g0b1, stm32h753xx, stm32h753xx/stm32h753xx_spifram, ubuntu.")
+  message(SEND_ERROR "LIBPARAMS_PLATFORM is not specified! Options: stm32f103, stm32g0b1, stm32h753xx, ubuntu.")
 endif()
 
 FILE(GLOB libparamsPlatformSpecificSrc
   ${CMAKE_CURRENT_LIST_DIR}/platform_specific/${LIBPARAMS_PLATFORM}/*.c*
 )
 
+if(LIBPARAMS_PLATFORM STREQUAL "stm32h753xx")
+  FILE(GLOB libparamsStm32h753xxSpiFramSrc
+    ${CMAKE_CURRENT_LIST_DIR}/platform_specific/stm32h753xx/stm32h753xx_spifram/*.c*
+  )
+  list(APPEND libparamsPlatformSpecificSrc ${libparamsStm32h753xxSpiFramSrc})
+endif()
+
 FILE(GLOB libparamsPlatformSpecificHeaders
   ${CMAKE_CURRENT_LIST_DIR}/platform_specific/${LIBPARAMS_PLATFORM}/
 )
+
+set(libparamsExtraPlatformHeaders)
+if(LIBPARAMS_PLATFORM STREQUAL "stm32h753xx")
+  list(APPEND libparamsExtraPlatformHeaders
+    ${CMAKE_CURRENT_LIST_DIR}/platform_specific/stm32h753xx/stm32h753xx_spifram/
+  )
+endif()
 
 set(libparamsSrc
   ${CMAKE_CURRENT_LIST_DIR}/src/rom.c
@@ -33,4 +46,5 @@ set(libparamsHeaders
   ${CMAKE_CURRENT_LIST_DIR}/include/libparams/
   ${CMAKE_CURRENT_LIST_DIR}/platform_specific/${LIBPARAMS_PLATFORM}/
   ${libparamsPlatformSpecificHeaders}
+  ${libparamsExtraPlatformHeaders}
 )

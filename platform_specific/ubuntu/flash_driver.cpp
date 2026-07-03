@@ -9,6 +9,7 @@
 #include <string.h>
 #include "storage.h"
 #include "flash_driver.h"
+#include "platform_flash_driver.h"
 #include "libparams_error_codes.h"
 #include "params.hpp"
 #include "YamlParameters.hpp"
@@ -40,11 +41,19 @@ static ParametersLayout_t params_layout = {
 
 static YamlParameters yaml_params = YamlParameters(mem_layout, params_layout);
 
+static void flashInit();
+static int8_t flashUnlock();
+static int8_t flashLock();
+static int8_t flashErase(uint32_t start_page_idx, uint32_t num_of_pages);
+static size_t flashRead(uint8_t* data, size_t offset, size_t bytes_to_read);
+static int32_t flashWrite(const uint8_t* data, size_t offset, size_t bytes_to_write);
+static uint16_t flashGetNumberOfPages();
+static uint32_t flashGetPageSize();
 static uint8_t* flashGetPointer();
 static int32_t __save_to_files();
 static int8_t __read_from_files();
 
-void flashInit() {
+static void flashInit() {
     // Deprecated since v0.15.0, kept for backward compatibility.
     // Can be removed once the supported version is above v0.15.x.
 #ifdef LIBPARAMS_INIT_PARAMS_FILE_NAME
@@ -69,17 +78,17 @@ void flashInit() {
     __read_from_files();
 }
 
-int8_t flashUnlock() {
+static int8_t flashUnlock() {
     is_locked = false;
     return 0;
 }
 
-int8_t flashLock() {
+static int8_t flashLock() {
     is_locked = true;
     return 0;
 }
 
-int8_t flashErase(uint32_t start_page_idx, uint32_t num_of_pages) {
+static int8_t flashErase(uint32_t start_page_idx, uint32_t num_of_pages) {
     if (is_locked || start_page_idx + num_of_pages > 2 * n_flash_pages || num_of_pages == 0) {
         return LIBPARAMS_WRONG_ARGS;
     }
@@ -92,14 +101,14 @@ static uint8_t* flashGetPointer() {
     return (uint8_t*)flash_memory;
 }
 
-size_t flashRead(uint8_t* data, size_t offset, size_t bytes_to_read) {
+static size_t flashRead(uint8_t* data, size_t offset, size_t bytes_to_read) {
     const uint8_t* rom = &(flashGetPointer()[offset]);
     memcpy(data, rom, bytes_to_read);
 
     return bytes_to_read;
 }
 
-int32_t flashWrite(const uint8_t* data, size_t offset, size_t bytes_to_write) {
+static int32_t flashWrite(const uint8_t* data, size_t offset, size_t bytes_to_write) {
     if (is_locked || offset < FLASH_START_ADDR ||
             offset >= FLASH_START_ADDR + sizeof(flash_memory)) {
         return LIBPARAMS_WRONG_ARGS;
@@ -114,12 +123,27 @@ int32_t flashWrite(const uint8_t* data, size_t offset, size_t bytes_to_write) {
     return __save_to_files();
 }
 
-uint16_t flashGetNumberOfPages() {
+static uint16_t flashGetNumberOfPages() {
     return 2 * n_flash_pages;
 }
 
-uint32_t flashGetPageSize() {
+static uint32_t flashGetPageSize() {
     return PAGE_SIZE_BYTES;
+}
+
+const FlashDriverOps* ubuntuFlashGetOps() {
+    static const FlashDriverOps ops = {
+        flashInit,
+        flashUnlock,
+        flashLock,
+        flashErase,
+        flashWrite,
+        flashRead,
+        flashGetNumberOfPages,
+        flashGetPageSize,
+        FLASH_START_ADDR,
+    };
+    return &ops;
 }
 
 int32_t __save_to_files() {

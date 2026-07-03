@@ -12,7 +12,7 @@ add_libparams_stm32_platform_test(libparams_stm32h753xx
     cortex-m7
 )
 add_libparams_stm32_platform_test(libparams_stm32h753xx_spifram
-    stm32h753xx/stm32h753xx_spifram
+    stm32h753xx
     STM32H753xx
     cortex-m7
 )
