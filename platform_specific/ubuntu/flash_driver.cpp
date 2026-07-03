@@ -45,13 +45,25 @@ static int32_t __save_to_files();
 static int8_t __read_from_files();
 
 void flashInit() {
+    // Deprecated since v0.15.0, kept for backward compatibility.
+    // Can be removed once the supported version is above v0.15.x.
 #ifdef LIBPARAMS_INIT_PARAMS_FILE_NAME
-    yaml_params.set_init_file_name(LIBPARAMS_INIT_PARAMS_FILE_NAME);
+#pragma message("LIBPARAMS_INIT_PARAMS_FILE_NAME is deprecated, use LIBPARAMS_DEFAULT_PARAMS_FILE_NAME instead")
+    yaml_params.set_default_file_name(LIBPARAMS_INIT_PARAMS_FILE_NAME);
 #endif
 #ifdef LIBPARAMS_TEMP_PARAMS_FILE_NAME
-    yaml_params.set_temp_file_name(LIBPARAMS_TEMP_PARAMS_FILE_NAME);
+#pragma message("LIBPARAMS_TEMP_PARAMS_FILE_NAME is deprecated, use LIBPARAMS_NVM_PARAMS_FILE_NAME instead")
+    yaml_params.set_nvm_file_name(LIBPARAMS_TEMP_PARAMS_FILE_NAME);
 #endif
-    // load parameters to the last suited pages
+
+#ifdef LIBPARAMS_DEFAULT_PARAMS_FILE_NAME
+    yaml_params.set_default_file_name(LIBPARAMS_DEFAULT_PARAMS_FILE_NAME);
+#endif
+#ifdef LIBPARAMS_NVM_PARAMS_FILE_NAME
+    yaml_params.set_nvm_file_name(LIBPARAMS_NVM_PARAMS_FILE_NAME);
+#endif
+
+    // Load parameters to the last suited pages
     // (such that primary rom at always would be filled after initialization)
     yaml_params.flash.memory_ptr = &flashGetPointer()[mem_layout.flash_size];
     __read_from_files();
@@ -72,6 +84,7 @@ int8_t flashErase(uint32_t start_page_idx, uint32_t num_of_pages) {
         return LIBPARAMS_WRONG_ARGS;
     }
     memset(flash_memory + start_page_idx * PAGE_SIZE_BYTES, 0x00, num_of_pages * PAGE_SIZE_BYTES);
+    logger.info("flashErase: page=", start_page_idx, ", count=", num_of_pages);
     return LIBPARAMS_OK;
 }
 
@@ -94,6 +107,7 @@ int32_t flashWrite(const uint8_t* data, size_t offset, size_t bytes_to_write) {
 
     uint8_t* rom = &(flashGetPointer()[offset - FLASH_START_ADDR]);
     memcpy(rom, data, bytes_to_write);
+    logger.info("flashWrite: offset=", offset, ", bytes=", bytes_to_write);
     uint8_t redundant = (offset - FLASH_START_ADDR) / mem_layout.flash_size;
     yaml_params.flash.memory_ptr = &flashGetPointer()
                                    [redundant * mem_layout.flash_size];
