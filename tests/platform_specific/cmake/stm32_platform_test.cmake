@@ -3,6 +3,11 @@ function(add_libparams_stm32_platform_test target platform device_define)
     cmake_path(GET PLATFORM_SPECIFIC_TESTS_DIR PARENT_PATH TESTS_DIR)
     cmake_path(GET TESTS_DIR PARENT_PATH ROOT_DIR)
 
+    set(cpu cortex-m3)
+    if(ARGC GREATER 3)
+        set(cpu ${ARGV3})
+    endif()
+
     set(LIBPARAMS_PLATFORM ${platform})
     include(${ROOT_DIR}/libparams.cmake)
 
@@ -26,7 +31,7 @@ function(add_libparams_stm32_platform_test target platform device_define)
     )
 
     target_compile_options(${target} PRIVATE
-        -mcpu=cortex-m3
+        -mcpu=${cpu}
         -mthumb
         -Og
         -Wall
@@ -40,7 +45,7 @@ function(add_libparams_stm32_platform_test target platform device_define)
     )
 
     target_link_options(${target} PRIVATE
-        -mcpu=cortex-m3
+        -mcpu=${cpu}
         -mthumb
         -specs=nano.specs
         -specs=nosys.specs

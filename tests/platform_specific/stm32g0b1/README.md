@@ -4,7 +4,7 @@ This is the simplest stm32g0b1 CMake example.
 
 ## Purpose
 
-The application is inbtended simply to check that the library can be builded with corresponded compiler for given plathorm without Warnings and Errors.
+The application is intended simply to check that the library can be builded with corresponded compiler for given plathorm without Warnings and Errors.
 
 ## Usage
 

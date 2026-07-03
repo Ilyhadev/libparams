@@ -52,6 +52,11 @@ stm32g0b1: clean
 		-DCMAKE_TOOLCHAIN_FILE=${ROOT_DIR}/tests/platform_specific/cmake/arm-none-eabi-toolchain.cmake
 	cmake --build build/tests/platform_specific/stm32g0b1
 
+stm32h753xx: clean
+	cmake -S tests/platform_specific/stm32h753xx -B build/tests/platform_specific/stm32h753xx \
+		-DCMAKE_TOOLCHAIN_FILE=${ROOT_DIR}/tests/platform_specific/cmake/arm-none-eabi-toolchain.cmake
+	cmake --build build/tests/platform_specific/stm32h753xx
+
 UBUNTU_BUILD_DIR=${ROOT_DIR}/build/tests/platform_specific/ubuntu
 UBUNTU_CMAKE_DIR=${ROOT_DIR}/tests/platform_specific/ubuntu
 ubuntu: clean
