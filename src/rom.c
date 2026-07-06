@@ -25,7 +25,8 @@ static bool isFlashOpsValid(const FlashDriverOps* flash) {
            flash->get_page_size != NULL;
 }
 
-RomDriverInstance romInit(const FlashDriverOps* flash, int32_t first_page_idx, size_t pages_amount) {
+RomDriverInstance romInit(const FlashDriverOps* flash, int32_t first_page_idx,
+                          size_t pages_amount) {
     RomDriverInstance rom = {0};
     if (!isFlashOpsValid(flash)) {
         return rom;

@@ -7,8 +7,8 @@
  */
 
 #include "flash_driver.h"
-#include "platform_flash_driver.h"
 #include <string.h>
+#include "platform_flash_driver.h"
 #include "libparams_error_codes.h"
 #include "flash_registers.h"
 
