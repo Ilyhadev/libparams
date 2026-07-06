@@ -30,7 +30,7 @@ jobs:
           build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} make coverage
 
       - name: Run SonarQube Scan
-        if: github.event.repository.fork == false
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: SonarSource/sonarqube-scan-action@v8.2.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
