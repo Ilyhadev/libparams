@@ -9,49 +9,55 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include "flash_driver.h"
+#include "platform_flash_driver.h"
 #include "libparams_error_codes.h"
 #include "common/algorithms.hpp"
 
 // Test Case 1. Initialize flash driver
 TEST(TestFlashDriver, initializeFlashDriver) {
-    flashUnlock();
-    auto res = flashErase(0, 1);
-    flashLock();
+    const FlashDriverOps* flash = ubuntuFlashGetOps();
+    flash->unlock();
+    auto res = flash->erase(0, 1);
+    flash->lock();
     ASSERT_EQ(res, LIBPARAMS_OK);
 }
 
 
 // Test case 2. Erase
 TEST(TestFlashDriver, test_erase_ok) {
-    flashUnlock();
-    auto res = flashErase(0, 1);
-    flashLock();
+    const FlashDriverOps* flash = ubuntuFlashGetOps();
+    flash->unlock();
+    auto res = flash->erase(0, 1);
+    flash->lock();
     ASSERT_EQ(res, LIBPARAMS_OK);
 }
 
 TEST(TestFlashDriver, test_erase_error_locked) {
-    flashLock();
-    auto res = flashErase(0, 1);
-    flashLock();
+    const FlashDriverOps* flash = ubuntuFlashGetOps();
+    flash->lock();
+    auto res = flash->erase(0, 1);
+    flash->lock();
     ASSERT_TRUE(res < 0);
 }
 
 TEST(TestFlashDriver, test_erase_error_bad_second_arg) {
-    flashUnlock();
-    auto res = flashErase(0, 0);
-    flashLock();
+    const FlashDriverOps* flash = ubuntuFlashGetOps();
+    flash->unlock();
+    auto res = flash->erase(0, 0);
+    flash->lock();
     ASSERT_TRUE(res < 0);
 }
 
 
 // Test case 3. flashRead
 TEST(TestFlashDriver, test_read_flash_ok) {
-    flashUnlock();
-    auto res = flashErase(0, 1);
-    flashLock();
+    const FlashDriverOps* flash = ubuntuFlashGetOps();
+    flash->unlock();
+    auto res = flash->erase(0, 1);
+    flash->lock();
     ASSERT_EQ(res, LIBPARAMS_OK);
     uint8_t val;
-    res = flashRead(&val, 0, 1);
+    res = flash->read(&val, 0, 1);
     ASSERT_EQ(res, 1);
     ASSERT_EQ(0, val);
 }
@@ -59,43 +65,47 @@ TEST(TestFlashDriver, test_read_flash_ok) {
 
 // Test case 4. flashWrite
 TEST(TestFlashDriver, test_write_flash_wrong_addr) {
-    flashUnlock();
-    auto res = flashWrite((uint8_t*)42, 0, 1);
-    flashLock();
+    const FlashDriverOps* flash = ubuntuFlashGetOps();
+    flash->unlock();
+    auto res = flash->write((uint8_t*)42, 0, 1);
+    flash->lock();
     ASSERT_EQ(res, LIBPARAMS_WRONG_ARGS);
 }
 
 TEST(TestFlashDriver, test_write_flash_ok) {
-    flashUnlock();
+    const FlashDriverOps* flash = ubuntuFlashGetOps();
+    flash->unlock();
     uint8_t val = 42;
-    auto res = flashWrite(&val, FLASH_START_ADDR, 1);
-    flashLock();
+    auto res = flash->write(&val, FLASH_START_ADDR, 1);
+    flash->lock();
     ASSERT_EQ(res, LIBPARAMS_OK);
 }
 
 
 // Test case 5. Check values`
 TEST(TestFlashDriver, test_flash_check_numeric_ok) {
-    flashUnlock();
+    const FlashDriverOps* flash = ubuntuFlashGetOps();
+    flash->unlock();
     uint8_t val = 42;
-    auto res = flashWrite(&val, FLASH_START_ADDR, 1);
-    flashLock();
+    auto res = flash->write(&val, FLASH_START_ADDR, 1);
+    flash->lock();
     ASSERT_EQ(res, LIBPARAMS_OK);
     uint8_t read_val = 0;
-    res = flashRead(&read_val, 0, 1);
+    res = flash->read(&read_val, 0, 1);
     ASSERT_EQ(res, 1);
     ASSERT_EQ(val, read_val);
 }
 
 TEST(TestFlashDriver, test_flash_check_string_ok) {
+    const FlashDriverOps* flash = ubuntuFlashGetOps();
     char val[56];
     generateRandomCString(val, 56);
-    flashUnlock();
-    auto res = flashWrite((uint8_t*)val, FLASH_START_ADDR, 56);
-    flashLock();
+    flash->unlock();
+    auto res = flash->write((uint8_t*)val, FLASH_START_ADDR, 56);
+    flash->lock();
     ASSERT_EQ(res, LIBPARAMS_OK);
     uint8_t read_val[56];
-    res = flashRead(read_val, 0, 56);
+    res = flash->read(read_val, 0, 56);
     ASSERT_EQ(res, 56);
     ASSERT_STREQ(val, (char*)read_val);
 }

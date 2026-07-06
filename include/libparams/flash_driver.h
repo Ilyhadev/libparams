@@ -18,40 +18,18 @@
 extern "C" {
 #endif
 
+typedef struct {
+    void (*init)(void);
+    int8_t (*unlock)(void);
+    int8_t (*lock)(void);
+    int8_t (*erase)(uint32_t start_page_idx, uint32_t num_of_pages);
+    int32_t (*write)(const uint8_t* data, size_t offset, size_t bytes_to_write);
+    size_t (*read)(uint8_t* data, size_t offset, size_t bytes_to_read);
+    uint16_t (*get_number_of_pages)(void);
+    uint32_t (*get_page_size)(void);
+    size_t start_addr;
+} FlashDriverOps;
 
-/**
- * @brief Do nothing at the moment, but reserved for future possible updates
- */
-void flashInit();
-
-/**
- * @param start_page_idx starts from 0 up to maximum number of pages
- * @param num_of_pages last page should not be above flashGetNumberOfPages()
- * @return 0 if success, otherwise < 0
- */
-int8_t flashErase(uint32_t start_page_idx, uint32_t num_of_pages);
-
-/**
- * @brief Before writing you must call flashUnlock(), after writing you must call flashLock()
- *        Write chunk of data like memcpy
- * @return number of written bytes if success, otherwise < 0
- */
-int8_t flashUnlock();
-int32_t flashWrite(const uint8_t* data, size_t offset, size_t bytes_to_write);
-int8_t flashLock();
-
-/**
- * @brief Read chunk of data like memcpy
- * @return bytes_to_read if success, otherwise 0
- */
-size_t flashRead(uint8_t* data, size_t offset, size_t bytes_to_read);
-
-
-/**
- * @return Info about the flash memory
- */
-uint16_t flashGetNumberOfPages();
-uint32_t flashGetPageSize();
 
 #ifdef __cplusplus
 }

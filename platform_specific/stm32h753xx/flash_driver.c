@@ -9,9 +9,18 @@
 #include "flash_driver.h"
 #include <stdint.h>
 #include <string.h>
+#include "platform_flash_driver.h"
 #include "libparams_error_codes.h"
 #include "stm32h7xx_hal.h"
 
+static void flashInit(void);
+static int8_t flashUnlock(void);
+static int8_t flashLock(void);
+static int8_t flashErase(uint32_t first_page_idx, uint32_t num_of_pages);
+static int32_t flashWrite(const uint8_t* data, size_t offset, size_t size);
+static size_t flashRead(uint8_t* data, size_t offset, size_t bytes_to_read);
+static uint16_t flashGetNumberOfPages(void);
+static uint32_t flashGetPageSize(void);
 static uint8_t* flashGetPointer();
 static int8_t flashEraseSectorsInSingleBank(uint32_t first_sector_idx,
                                             uint32_t num_of_sectors,
@@ -20,14 +29,14 @@ static int8_t flashWriteFlashword(uint32_t address, const uint8_t data[]);
 
 static const size_t FLASH_WORD_SIZE = (FLASH_NB_32BITWORD_IN_FLASHWORD * 4U);
 
-void flashInit() {
+static void flashInit(void) {
 }
 
-int8_t flashUnlock() {
+static int8_t flashUnlock(void) {
     return -HAL_FLASH_Unlock();
 }
 
-int8_t flashLock() {
+static int8_t flashLock(void) {
     return -HAL_FLASH_Lock();
 }
 
@@ -37,7 +46,7 @@ int8_t flashLock() {
  * max 2.6 s
  * @note from STM32H753 datasheet
  */
-int8_t flashErase(uint32_t first_page_idx, uint32_t num_of_pages) {
+static int8_t flashErase(uint32_t first_page_idx, uint32_t num_of_pages) {
     uint32_t last_page_idx = first_page_idx + num_of_pages;
     if (last_page_idx > flashGetNumberOfPages() || num_of_pages == 0) {
         return LIBPARAMS_WRONG_ARGS;
@@ -68,7 +77,7 @@ int8_t flashErase(uint32_t first_page_idx, uint32_t num_of_pages) {
     return res;
 }
 
-int32_t flashWrite(const uint8_t* data, size_t offset, size_t size) {
+static int32_t flashWrite(const uint8_t* data, size_t offset, size_t size) {
     int32_t status = 0;
     if (data == NULL || size == 0U) {
         return LIBPARAMS_WRONG_ARGS;
@@ -97,7 +106,7 @@ int32_t flashWrite(const uint8_t* data, size_t offset, size_t size) {
     return (status < 0) ? status : (int32_t)size;
 }
 
-size_t flashRead(uint8_t* data, size_t offset, size_t bytes_to_read) {
+static size_t flashRead(uint8_t* data, size_t offset, size_t bytes_to_read) {
     if (data == NULL) {
         return 0;
     }
@@ -107,7 +116,7 @@ size_t flashRead(uint8_t* data, size_t offset, size_t bytes_to_read) {
     return bytes_to_read;
 }
 
-uint16_t flashGetNumberOfPages() {
+static uint16_t flashGetNumberOfPages(void) {
 #if defined(DUAL_BANK)
     return (uint16_t)(FLASH_SECTOR_TOTAL * 2U);
 #else
@@ -115,8 +124,23 @@ uint16_t flashGetNumberOfPages() {
 #endif
 }
 
-uint32_t flashGetPageSize() {
+static uint32_t flashGetPageSize(void) {
     return FLASH_SECTOR_SIZE;
+}
+
+const FlashDriverOps* stm32h753xxInternalFlashGetOps(void) {
+    static const FlashDriverOps ops = {
+        flashInit,
+        flashUnlock,
+        flashLock,
+        flashErase,
+        flashWrite,
+        flashRead,
+        flashGetNumberOfPages,
+        flashGetPageSize,
+        FLASH_START_ADDR,
+    };
+    return &ops;
 }
 
 static uint8_t* flashGetPointer() {

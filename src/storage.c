@@ -74,16 +74,17 @@ const char* paramsGetDir() {
 #endif
 }
 
-int8_t paramsInit(ParamIndex_t int_num,
+int8_t paramsInit(const FlashDriverOps* flash,
+                  ParamIndex_t int_num,
                   ParamIndex_t str_num,
                   int32_t first_page_idx,
                   size_t pages_num) {
-    if (int_num > 512 || str_num > 512) {
+    if (flash == NULL || int_num > 512 || str_num > 512) {
         return LIBPARAMS_WRONG_ARGS;
     }
     uint32_t need_memory_bytes = sizeof(IntegerParamValue_t) * int_num +\
                                  MAX_STRING_LENGTH * str_num;
-    primary_rom = romInit(first_page_idx, pages_num);
+    primary_rom = romInit(flash, first_page_idx, pages_num);
 
     if (!primary_rom.inited) {
         return LIBPARAMS_UNKNOWN_ERROR;
@@ -121,7 +122,7 @@ bool paramsIsCrcValid() {
 int8_t paramsInitRedundantPage() {
     size_t pages_amount = primary_rom.pages_amount;
     int32_t redundant_rom_first_page_idx = (int32_t)(primary_rom.first_page_idx - pages_amount);
-    redundant_rom = romInit(redundant_rom_first_page_idx, pages_amount);
+    redundant_rom = romInit(primary_rom.flash, redundant_rom_first_page_idx, pages_amount);
     if (!redundant_rom.inited) {
         return LIBPARAMS_UNKNOWN_ERROR;
     }

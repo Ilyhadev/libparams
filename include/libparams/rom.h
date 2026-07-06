@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "flash_driver.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,6 +24,7 @@ extern "C" {
  * Use romInit() to create an instance.
  */
 typedef struct {
+    const FlashDriverOps* flash;
     size_t addr;
     size_t first_page_idx;
     size_t total_size;
@@ -41,9 +43,9 @@ typedef struct {
  * On Ubuntu platform, it is safe to use -1 even if it has a single page (equal to idx=0).
  * @param pages_num The amount of allocated pages. At least 1 page is required.
  * @return ROM driver instance. It will have inited=true on success and inited=false on failure.
- * @note Example of a single latest page allocation: romInit(-1, 1)
+ * @note Example of a single latest page allocation: romInit(stm32h753xxInternalFlashGetOps(), -1, 1)
  */
-RomDriverInstance romInit(int32_t first_page_idx, size_t pages_amount);
+RomDriverInstance romInit(const FlashDriverOps* flash, int32_t first_page_idx, size_t pages_amount);
 
 /**
  * @brief Return the number of bytes read (may be less than requested_size).

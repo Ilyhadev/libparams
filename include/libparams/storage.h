@@ -74,6 +74,7 @@ typedef uint16_t ParamIndex_t;
 
 /**
  * @brief           Initialize the parameters. Call this on startup.
+ * @param flash     Flash driver operations used as parameter storage.
  * @param int_num   The amount of integers parameters
  * @param str_num   The amount of string parameters
  * @param first_page_idx Index of the first page. Negative values are counted from the end.
@@ -81,7 +82,9 @@ typedef uint16_t ParamIndex_t;
  * @param pages_num The amount of allocated pages. At least 1 page is required.
  * @return          LIBPARAMS_OK on success, otherwise < 0.
  */
-int8_t paramsInit(ParamIndex_t int_num, ParamIndex_t str_num,
+int8_t paramsInit(const FlashDriverOps* flash,
+                  ParamIndex_t int_num,
+                  ParamIndex_t str_num,
                   int32_t first_page_idx, size_t pages_num);
 
 /**

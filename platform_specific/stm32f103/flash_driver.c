@@ -8,6 +8,7 @@
 
 #include "flash_driver.h"
 #include <string.h>
+#include "platform_flash_driver.h"
 #include "libparams_error_codes.h"
 #include "flash_registers.h"
 
@@ -21,21 +22,29 @@
 
 uint32_t HAL_GetTick();
 
+static void flashInit(void);
+static int8_t flashUnlock(void);
+static int8_t flashLock(void);
+static int8_t flashErase(uint32_t start_page_idx, uint32_t num_of_pages);
+static int32_t flashWrite(const uint8_t* data, size_t offset, size_t size);
+static size_t flashRead(uint8_t* data, size_t offset, size_t bytes_to_read);
+static uint16_t flashGetNumberOfPages(void);
+static uint32_t flashGetPageSize(void);
 static uint8_t* flashGetPointer();
 static int8_t flashWaitForLastOperation(uint32_t timeout);
 static void flashPageErase(uint32_t page_address);
 static void flashProgramHalfWord(uint32_t address, uint16_t data);
 
 
-void flashInit() {
+static void flashInit(void) {
 }
 
-int8_t flashUnlock() {
+static int8_t flashUnlock(void) {
     WRITE_REG(FLASH->KEYR, FLASH_KEYR_KEY1);
     WRITE_REG(FLASH->KEYR, FLASH_KEYR_KEY2);
     return 0;
 }
-int8_t flashLock() {
+static int8_t flashLock(void) {
     SET_BIT(FLASH->CR, FLASH_CR_LOCK);
     return 0;
 }
@@ -46,7 +55,7 @@ int8_t flashLock() {
  * max 40 ms
  * @note from https://www.st.com/resource/en/datasheet/stm32f103c8.pdf
  */
-int8_t flashErase(uint32_t start_page_idx, uint32_t num_of_pages) {
+static int8_t flashErase(uint32_t start_page_idx, uint32_t num_of_pages) {
     if (flashWaitForLastOperation((uint32_t)FLASH_TIMEOUT_VALUE) != 0) {
         return -1;
     }
@@ -70,7 +79,7 @@ static uint8_t* flashGetPointer() {
     return (uint8_t*) FLASH_START_ADDR;
 }
 
-int32_t flashWrite(const uint8_t* data, size_t offset, size_t size) {
+static int32_t flashWrite(const uint8_t* data, size_t offset, size_t size) {
     int32_t status = flashWaitForLastOperation(FLASH_TIMEOUT_VALUE);
 
     if (status < 0) {
@@ -92,7 +101,7 @@ int32_t flashWrite(const uint8_t* data, size_t offset, size_t size) {
     return status;
 }
 
-size_t flashRead(uint8_t* data, size_t offset, size_t bytes_to_read) {
+static size_t flashRead(uint8_t* data, size_t offset, size_t bytes_to_read) {
     if (data == NULL) {
         return 0;
     }
@@ -102,12 +111,27 @@ size_t flashRead(uint8_t* data, size_t offset, size_t bytes_to_read) {
     return bytes_to_read;
 }
 
-uint16_t flashGetNumberOfPages() {
+static uint16_t flashGetNumberOfPages(void) {
     return 128;
 }
 
-uint32_t flashGetPageSize() {
+static uint32_t flashGetPageSize(void) {
     return FLASH_PAGE_SIZE;
+}
+
+const FlashDriverOps* stm32f103InternalFlashGetOps(void) {
+    static const FlashDriverOps ops = {
+        flashInit,
+        flashUnlock,
+        flashLock,
+        flashErase,
+        flashWrite,
+        flashRead,
+        flashGetNumberOfPages,
+        flashGetPageSize,
+        FLASH_START_ADDR,
+    };
+    return &ops;
 }
 
 static int8_t flashWaitForLastOperation(uint32_t timeout) {

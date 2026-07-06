@@ -9,29 +9,45 @@
 #include "rom.h"
 #include <stddef.h>
 #include <string.h>
-#include "flash_driver.h"
 #include "libparams_error_codes.h"
 
 int32_t libparams_rom_error_code = 0;
 
-RomDriverInstance romInit(int32_t first_page_idx, size_t pages_amount) {
-    if (first_page_idx < 0) {
-        first_page_idx += flashGetNumberOfPages();
+static bool isFlashOpsValid(const FlashDriverOps* flash) {
+    return flash != NULL &&
+           flash->init != NULL &&
+           flash->unlock != NULL &&
+           flash->lock != NULL &&
+           flash->erase != NULL &&
+           flash->write != NULL &&
+           flash->read != NULL &&
+           flash->get_number_of_pages != NULL &&
+           flash->get_page_size != NULL;
+}
+
+RomDriverInstance romInit(const FlashDriverOps* flash, int32_t first_page_idx,
+                          size_t pages_amount) {
+    RomDriverInstance rom = {0};
+    if (!isFlashOpsValid(flash)) {
+        return rom;
     }
 
-    RomDriverInstance rom = {0};
+    if (first_page_idx < 0) {
+        first_page_idx += flash->get_number_of_pages();
+    }
 
     if (first_page_idx < 0 ||
-            first_page_idx + pages_amount > flashGetNumberOfPages() ||
+            first_page_idx + pages_amount > flash->get_number_of_pages() ||
             pages_amount == 0) {
         return rom;
     }
 
-    flashInit();
+    flash->init();
 
-    rom.addr = FLASH_START_ADDR + first_page_idx * flashGetPageSize();
+    rom.flash = flash;
+    rom.addr = flash->start_addr + first_page_idx * flash->get_page_size();
     rom.first_page_idx = first_page_idx;
-    rom.total_size = pages_amount * flashGetPageSize();
+    rom.total_size = pages_amount * flash->get_page_size();
     rom.pages_amount = pages_amount;
     rom.inited = true;
     rom.write_protected = true;
@@ -39,7 +55,8 @@ RomDriverInstance romInit(int32_t first_page_idx, size_t pages_amount) {
 }
 
 size_t romRead(const RomDriverInstance* rom, size_t offset, uint8_t* data, size_t requested_size) {
-    if (rom == NULL || data == NULL || offset >= rom->total_size || requested_size == 0) {
+    if (rom == NULL || rom->flash == NULL || data == NULL ||
+            offset >= rom->total_size || requested_size == 0) {
         return 0;
     }
 
@@ -51,19 +68,21 @@ size_t romRead(const RomDriverInstance* rom, size_t offset, uint8_t* data, size_
         bytes_to_read = requested_size;
     }
 
-    return flashRead(data, rom->first_page_idx * flashGetPageSize() + offset, bytes_to_read);
+    return rom->flash->read(data,
+                            rom->first_page_idx * rom->flash->get_page_size() + offset,
+                            bytes_to_read);
 }
 
 void romBeginWrite(RomDriverInstance* rom) {
-    if (rom == NULL) {
+    if (rom == NULL || rom->flash == NULL) {
         return;
     }
 
-    if (flashUnlock() < 0) {
+    if (rom->flash->unlock() < 0) {
         return;
     }
 
-    if (flashErase((uint32_t)rom->first_page_idx, (uint32_t)rom->pages_amount) < 0) {
+    if (rom->flash->erase((uint32_t)rom->first_page_idx, (uint32_t)rom->pages_amount) < 0) {
         return;
     }
 
@@ -71,7 +90,7 @@ void romBeginWrite(RomDriverInstance* rom) {
 }
 
 int32_t romWrite(const RomDriverInstance* rom, size_t offset, const uint8_t* data, size_t size) {
-    if (rom == NULL || data == NULL ||
+    if (rom == NULL || rom->flash == NULL || data == NULL ||
             offset >= rom->total_size || size == 0 || offset + size > rom->total_size) {
         libparams_rom_error_code = LIBPARAMS_ROM_WRITE_BAD_ARGS_ERROR;
         return LIBPARAMS_ROM_WRITE_BAD_ARGS_ERROR;
@@ -83,7 +102,7 @@ int32_t romWrite(const RomDriverInstance* rom, size_t offset, const uint8_t* dat
     }
 
     int32_t status = 0;
-    status = flashWrite(data, (uint32_t)offset + rom->addr, size);
+    status = rom->flash->write(data, (uint32_t)offset + rom->addr, size);
 
     if (status < 0) {
         libparams_rom_error_code = -1000 + status;
@@ -102,12 +121,12 @@ uint32_t romGetAvailableMemory(const RomDriverInstance* rom) {
 }
 
 void romEndWrite(RomDriverInstance* rom) {
-    if (rom == NULL) {
+    if (rom == NULL || rom->flash == NULL) {
         return;
     }
 
     if (!rom->write_protected) {
-        flashLock();
+        rom->flash->lock();
         rom->write_protected = true;
     }
 }

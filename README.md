@@ -81,7 +81,7 @@ Look at [libparams/storage.h](libparams/storage.h) to get full API and [src/stor
 
 ROM driver simply allows you to write and read sequence of bytes. Mainly, it consist of 3 operations.
 
-1. Initialization. It is necessary to call `romInit()` to configure the driver. Storage driver do it automatically.
+1. Initialization. It is necessary to call `romInit()` with flash driver ops to configure the driver. Storage driver do it automatically.
 
 2. Read operation. You just need to call `romRead` with corresponded arguments.
 
@@ -174,9 +174,15 @@ The initialization of the application can be as shown below:
 
 ```c++
 #include "params.h"
+#include "flash_driver.h"
+#include "platform_flash_driver.h"
 
 void application_example() {
-    paramsInit(IntParamsIndexes::INTEGER_PARAMS_AMOUNT, StrParamsIndexes::STRING_PARAMS_AMOUNT, -1, 1);
+    paramsInit(stm32h753xxInternalFlashGetOps(),
+               IntParamsIndexes::INTEGER_PARAMS_AMOUNT,
+               StrParamsIndexes::STRING_PARAMS_AMOUNT,
+               -1,
+               1);
     paramsLoad();
 }
 ```

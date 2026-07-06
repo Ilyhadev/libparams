@@ -10,6 +10,7 @@
 #include <vector>
 #include <gtest/gtest.h>
 #include "storage.h"
+#include "platform_flash_driver.h"
 #include "params.hpp"
 
 bool strCompareSafe(const char* first, const char* second, size_t len) {
@@ -23,7 +24,7 @@ bool strCompareSafe(const char* first, const char* second, size_t len) {
 }
 
 void init() {
-    paramsInit(IntParamsIndexes::INTEGER_PARAMS_AMOUNT, NUM_OF_STR_PARAMS, -1, 1);
+    paramsInit(ubuntuFlashGetOps(), IntParamsIndexes::INTEGER_PARAMS_AMOUNT, NUM_OF_STR_PARAMS, -1, 1);
     paramsLoad();
 }
 

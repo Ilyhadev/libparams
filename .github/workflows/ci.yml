@@ -34,6 +34,7 @@ jobs:
         run: |
           make -s stm32f103
           make -s stm32g0b1
+          make -s stm32h753xx
           make -s ubuntu
 
   test_params_generator:

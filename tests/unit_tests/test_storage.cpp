@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include "storage.h"
+#include "platform_flash_driver.h"
 #include "libparams_error_codes.h"
 #include "common/algorithms.hpp"
 
@@ -33,11 +34,15 @@ class RedundantRomStorageDriverTest : public ::testing::Test {
 protected:
     size_t primary_rom_addr;
     size_t redundant_rom_addr;
+    const FlashDriverOps* params_flash;
     void SetUp() override {
-        paramsInit(INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, -1, 1);
+        params_flash = ubuntuFlashGetOps();
+        paramsInit(params_flash, INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, -1, 1);
         EXPECT_NE(active_rom, nullptr);
+        EXPECT_EQ(active_rom->flash, params_flash);
         paramsInitRedundantPage();
         EXPECT_NE(standby_rom, nullptr);
+        EXPECT_EQ(standby_rom->flash, params_flash);
         primary_rom_addr = active_rom->addr;
         redundant_rom_addr = standby_rom->addr;
         paramsLoad();
@@ -54,8 +59,8 @@ protected:
     RomDriverInstance rom;
 
     void SetUp() override {
-        rom = romInit(-1, 1);
-        paramsInit(INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, -1, 1);
+        rom = romInit(ubuntuFlashGetOps(), -1, 1);
+        paramsInit(ubuntuFlashGetOps(), INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, -1, 1);
         paramsLoad();
     }
 };
@@ -63,7 +68,7 @@ protected:
 class EmptyStorageDriverTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        paramsInit(0, 0, -1, 1);  // reset storage
+        paramsInit(ubuntuFlashGetOps(), 0, 0, -1, 1);  // reset storage
     }
 };
 
@@ -72,23 +77,27 @@ protected:
 // Test Case 1: Initialization of Parameters
 // Test 1.1: Initialize with Valid Inputs
 TEST_F(EmptyStorageDriverTest, initializeWithValidInput) {
-    ASSERT_EQ(LIBPARAMS_OK, paramsInit(INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, -1, 1));
+    ASSERT_EQ(LIBPARAMS_OK, paramsInit(ubuntuFlashGetOps(), INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, -1, 1));
 }
 // Test 1.2: Initialize with zero params
 TEST_F(EmptyStorageDriverTest, initializeWithZeroParams) {
-    ASSERT_EQ(LIBPARAMS_OK, paramsInit(0, 0, -1, 1));
+    ASSERT_EQ(LIBPARAMS_OK, paramsInit(ubuntuFlashGetOps(), 0, 0, -1, 1));
 }
 // Test 1.3: Initialize with too much params
 TEST_F(EmptyStorageDriverTest, initializeWithTooMuchParams) {
-    ASSERT_EQ(LIBPARAMS_WRONG_ARGS, paramsInit(1000, 1000, -1, 1));
+    ASSERT_EQ(LIBPARAMS_WRONG_ARGS, paramsInit(ubuntuFlashGetOps(), 1000, 1000, -1, 1));
 }
 // Test 1.4: Initialize with Zero Pages
 TEST_F(EmptyStorageDriverTest, initializeZeroPages) {
-    ASSERT_EQ(LIBPARAMS_UNKNOWN_ERROR, paramsInit(INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, 0, 0));
+    ASSERT_EQ(LIBPARAMS_UNKNOWN_ERROR, paramsInit(ubuntuFlashGetOps(), INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, 0, 0));
 }
 // Test 1.5: Initialize with Invalid Page Index
 TEST_F(EmptyStorageDriverTest, initializeWithInvalidaPageIndex) {
-    ASSERT_EQ(LIBPARAMS_UNKNOWN_ERROR, paramsInit(INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, -1, 2));
+    ASSERT_EQ(LIBPARAMS_UNKNOWN_ERROR, paramsInit(ubuntuFlashGetOps(), INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, -1, 2));
+}
+// Test 1.6: Initialize with null flash ops
+TEST_F(EmptyStorageDriverTest, initializeWithNullFlashOps) {
+    ASSERT_EQ(LIBPARAMS_WRONG_ARGS, paramsInit(nullptr, INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, -1, 1));
 }
 
 // Test Case 2: Load Parameters
@@ -131,19 +140,19 @@ TEST_F(EmptyStorageDriverTest, loadParametersSuccessfully) {
 // Test 3.1: Save Parameters Successfully
 TEST_F(EmptyStorageDriverTest, saveParametersSuccessfully) {
     // Normal
-    ASSERT_EQ(LIBPARAMS_OK, paramsInit(INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, -1, 1));
+    ASSERT_EQ(LIBPARAMS_OK, paramsInit(ubuntuFlashGetOps(), INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, -1, 1));
     ASSERT_EQ(LIBPARAMS_OK, paramsSave());
 
     // Zero integers is ok
-    ASSERT_EQ(LIBPARAMS_OK, paramsInit(0, STRING_PARAMS_AMOUNT, -1, 1));
+    ASSERT_EQ(LIBPARAMS_OK, paramsInit(ubuntuFlashGetOps(), 0, STRING_PARAMS_AMOUNT, -1, 1));
     ASSERT_EQ(LIBPARAMS_OK, paramsSave());
 
     // Zero strings is ok
-    ASSERT_EQ(LIBPARAMS_OK, paramsInit(INTEGER_PARAMS_AMOUNT, 0, -1, 1));
+    ASSERT_EQ(LIBPARAMS_OK, paramsInit(ubuntuFlashGetOps(), INTEGER_PARAMS_AMOUNT, 0, -1, 1));
     ASSERT_EQ(LIBPARAMS_OK, paramsSave());
 
     // Full storage is ok
-    ASSERT_EQ(LIBPARAMS_OK, paramsInit((ParamIndex_t)512, 0, -1, 1));
+    ASSERT_EQ(LIBPARAMS_OK, paramsInit(ubuntuFlashGetOps(), (ParamIndex_t)512, 0, -1, 1));
     ASSERT_EQ(LIBPARAMS_OK, paramsSave());
 }
 
@@ -323,10 +332,14 @@ TEST_F(SinglePageStorageDriverTest, test_paramsSetStringValue) {
 TEST_F(RedundantRomStorageDriverTest, pageSwitchAfterSave) {
     ASSERT_EQ(active_rom->addr, primary_rom_addr);
     ASSERT_EQ(standby_rom->addr, redundant_rom_addr);
+    ASSERT_EQ(active_rom->flash, params_flash);
+    ASSERT_EQ(standby_rom->flash, params_flash);
 
     paramsSave();
     ASSERT_EQ(active_rom->addr, redundant_rom_addr);
     ASSERT_EQ(standby_rom->addr, primary_rom_addr);
+    ASSERT_EQ(active_rom->flash, params_flash);
+    ASSERT_EQ(standby_rom->flash, params_flash);
 
     ASSERT_TRUE(standby_rom->erased);
 }
@@ -335,10 +348,14 @@ TEST_F(RedundantRomStorageDriverTest, pageSwitchAfterSave) {
 TEST_F(RedundantRomStorageDriverTest, pageEraseAfterSave) {
     ASSERT_EQ(active_rom->addr, primary_rom_addr);
     ASSERT_EQ(standby_rom->addr, redundant_rom_addr);
+    ASSERT_EQ(active_rom->flash, params_flash);
+    ASSERT_EQ(standby_rom->flash, params_flash);
 
     paramsSave();
     ASSERT_EQ(active_rom->addr, redundant_rom_addr);
     ASSERT_EQ(standby_rom->addr, primary_rom_addr);
+    ASSERT_EQ(active_rom->flash, params_flash);
+    ASSERT_EQ(standby_rom->flash, params_flash);
     // standby rom has to be erased
     ASSERT_TRUE(standby_rom->erased);
     romRead(standby_rom, 0, (uint8_t*)integer_values_pool, 4);
