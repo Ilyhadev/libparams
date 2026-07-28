@@ -28,6 +28,7 @@ typedef enum {
 extern RomDriverInstance* active_rom;
 extern RomDriverInstance* standby_rom;
 extern IntegerParamValue_t integer_values_pool[];
+extern StringParamValue_t string_values_pool[];
 
 
 class RedundantRomStorageDriverTest : public ::testing::Test {
@@ -129,6 +130,38 @@ TEST_F(SinglePageStorageDriverTest, loadParametersSuccessfully) {
     ASSERT_EQ(LIBPARAMS_OK, paramsLoad());
     ASSERT_EQ(50, paramsGetIntegerValue(NODE_ID));
 }
+
+TEST_F(SinglePageStorageDriverTest, loadDefaultsForErasedStringAfterValidString) {
+    StringParamValue_t stored_strings[STRING_PARAMS_AMOUNT] = {};
+    const char configured_name[] = "Configured";
+    memcpy(stored_strings[0], configured_name, sizeof(configured_name));
+    memset(stored_strings[1], 0xFF, sizeof(stored_strings[1]));
+
+    const size_t strings_offset =
+        romGetAvailableMemory(&rom) - sizeof(stored_strings);
+    romBeginWrite(&rom);
+    ASSERT_EQ(sizeof(stored_strings),
+              romWrite(&rom,
+                       strings_offset,
+                       reinterpret_cast<const uint8_t*>(stored_strings),
+                       sizeof(stored_strings)));
+    romEndWrite(&rom);
+
+    ASSERT_EQ(LIBPARAMS_OK, paramsLoad());
+    EXPECT_EQ(0, memcmp(string_values_pool[0],
+                        configured_name,
+                        sizeof(configured_name)));
+
+    const StringDesc_t* second_string_desc =
+        paramsGetStringDesc(MAGNETOMETER_TYPE);
+    ASSERT_NE(second_string_desc, nullptr);
+    const size_t second_default_size =
+        strlen(reinterpret_cast<const char*>(second_string_desc->def)) + 1U;
+    EXPECT_EQ(0, memcmp(string_values_pool[1],
+                        second_string_desc->def,
+                        second_default_size));
+}
+
 // Test 2.2: Load Parameters with Uninitialized Parameters
 // Actually, it is better to return an error here
 TEST_F(EmptyStorageDriverTest, loadParametersSuccessfully) {
@@ -165,10 +198,79 @@ TEST_F(EmptyStorageDriverTest, saveParametersWithUninitializedParameters) {
 // Test Case 4: Reset Parameters to Default
 // Test 4.1: Reset Parameters Successfully
 TEST_F(SinglePageStorageDriverTest, resetParametersSuccessfully) {
+    const char configured_name[] = "Configured";
+    ASSERT_EQ(sizeof(configured_name) - 1U,
+              paramsSetStringValue(NODE_NAME,
+                                   sizeof(configured_name) - 1U,
+                                   reinterpret_cast<const uint8_t*>(configured_name)));
+
     ASSERT_EQ(LIBPARAMS_OK, paramsResetToDefault());
+
+    const StringDesc_t* node_name_desc = paramsGetStringDesc(NODE_NAME);
+    ASSERT_NE(node_name_desc, nullptr);
+    const size_t default_size =
+        strlen(reinterpret_cast<const char*>(node_name_desc->def)) + 1U;
+    EXPECT_EQ(0, memcmp(string_values_pool[0],
+                        node_name_desc->def,
+                        default_size));
 }
 TEST_F(EmptyStorageDriverTest, resetParametersWithUninitializedParameters) {
     ASSERT_EQ(LIBPARAMS_NOT_INITIALIZED, paramsResetToDefault());
+}
+
+TEST_F(SinglePageStorageDriverTest, detectErasedParamsInFirst256Bytes) {
+    uint8_t stored_data[257];
+    memset(stored_data, 0xFF, sizeof(stored_data));
+
+    romBeginWrite(&rom);
+    ASSERT_EQ(sizeof(stored_data),
+              romWrite(&rom, 0, stored_data, sizeof(stored_data)));
+    romEndWrite(&rom);
+
+    bool is_erased = false;
+    ASSERT_EQ(LIBPARAMS_OK, is_params_erased(&is_erased));
+    EXPECT_TRUE(is_erased);
+
+    stored_data[127] = 0x00;
+    romBeginWrite(&rom);
+    ASSERT_EQ(sizeof(stored_data),
+              romWrite(&rom, 0, stored_data, sizeof(stored_data)));
+    romEndWrite(&rom);
+
+    ASSERT_EQ(LIBPARAMS_OK, is_params_erased(&is_erased));
+    EXPECT_FALSE(is_erased);
+
+    stored_data[127] = 0xFF;
+    stored_data[256] = 0x00;
+    romBeginWrite(&rom);
+    ASSERT_EQ(sizeof(stored_data),
+              romWrite(&rom, 0, stored_data, sizeof(stored_data)));
+    romEndWrite(&rom);
+
+    ASSERT_EQ(LIBPARAMS_OK, is_params_erased(&is_erased));
+    EXPECT_TRUE(is_erased);
+}
+
+TEST_F(SinglePageStorageDriverTest, detectErasedParamsInShortStorage) {
+    uint8_t stored_data[16];
+    memset(stored_data, 0xFF, sizeof(stored_data));
+
+    romBeginWrite(&rom);
+    ASSERT_EQ(sizeof(stored_data),
+              romWrite(&rom, 0, stored_data, sizeof(stored_data)));
+    romEndWrite(&rom);
+
+    RomDriverInstance short_rom = *active_rom;
+    short_rom.total_size = sizeof(stored_data);
+    RomDriverInstance* full_rom = active_rom;
+    active_rom = &short_rom;
+
+    bool is_erased = false;
+    const int8_t status = is_params_erased(&is_erased);
+    active_rom = full_rom;
+
+    EXPECT_EQ(LIBPARAMS_OK, status);
+    EXPECT_TRUE(is_erased);
 }
 
 
