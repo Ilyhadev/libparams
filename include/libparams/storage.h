@@ -179,6 +179,12 @@ uint8_t paramsSetStringValue(ParamIndex_t param_idx,
                              uint8_t str_len,
                              const StringParamValue_t param_value);
 
+/**
+ * @brief           Checks if params section was: mass erased/never flashed/sector erased
+ * @return          if params section appears to have all 0xFF.
+ */
+int8_t is_params_erased(bool* is_erased);
+
 #ifdef __cplusplus
 }
 #endif
