@@ -30,6 +30,21 @@ extern RomDriverInstance* standby_rom;
 extern IntegerParamValue_t integer_values_pool[];
 extern StringParamValue_t string_values_pool[];
 
+namespace {
+
+constexpr size_t TEST_ROM_SIZE = 2048U;
+uint8_t test_rom_data[TEST_ROM_SIZE];
+
+size_t testRomRead(uint8_t* data, size_t offset, size_t size) {
+    if (data == nullptr || offset + size > sizeof(test_rom_data)) {
+        return 0U;
+    }
+    memcpy(data, &test_rom_data[offset], size);
+    return size;
+}
+
+}  // namespace
+
 
 class RedundantRomStorageDriverTest : public ::testing::Test {
 protected:
@@ -142,16 +157,23 @@ TEST_F(SinglePageStorageDriverTest, loadDefaultsForErasedStringAfterValidString)
     memset(stored_strings[1], 0xFF, sizeof(stored_strings[1]));
 
     const size_t strings_offset =
-        romGetAvailableMemory(&rom) - sizeof(stored_strings);
-    romBeginWrite(&rom);
-    ASSERT_EQ(sizeof(stored_strings),
-              romWrite(&rom,
-                       strings_offset,
-                       reinterpret_cast<const uint8_t*>(stored_strings),
-                       sizeof(stored_strings)));
-    romEndWrite(&rom);
+        sizeof(test_rom_data) - sizeof(stored_strings);
+    memset(test_rom_data, 0xFF, sizeof(test_rom_data));
+    memcpy(&test_rom_data[strings_offset], stored_strings, sizeof(stored_strings));
 
-    ASSERT_EQ(LIBPARAMS_OK, paramsLoad());
+    FlashDriverOps test_flash_ops = *active_rom->flash;
+    test_flash_ops.read = testRomRead;
+    RomDriverInstance test_rom = *active_rom;
+    test_rom.flash = &test_flash_ops;
+    test_rom.first_page_idx = 0U;
+    test_rom.total_size = sizeof(test_rom_data);
+
+    RomDriverInstance* previous_rom = active_rom;
+    active_rom = &test_rom;
+    const int8_t load_status = paramsLoad();
+    active_rom = previous_rom;
+
+    ASSERT_EQ(LIBPARAMS_OK, load_status);
     EXPECT_EQ(0, memcmp(string_values_pool[0],
                         configured_name,
                         sizeof(configured_name)));
@@ -224,49 +246,51 @@ TEST_F(EmptyStorageDriverTest, resetParametersWithUninitializedParameters) {
 }
 
 TEST_F(SinglePageStorageDriverTest, detectErasedParamsInFirst256Bytes) {
-    uint8_t stored_data[257];
-    memset(stored_data, 0xFF, sizeof(stored_data));
+    memset(test_rom_data, 0xFF, sizeof(test_rom_data));
 
-    romBeginWrite(&rom);
-    ASSERT_EQ(sizeof(stored_data),
-              romWrite(&rom, 0, stored_data, sizeof(stored_data)));
-    romEndWrite(&rom);
+    FlashDriverOps test_flash_ops = *active_rom->flash;
+    test_flash_ops.read = testRomRead;
+    RomDriverInstance test_rom = *active_rom;
+    test_rom.flash = &test_flash_ops;
+    test_rom.first_page_idx = 0U;
+    test_rom.total_size = sizeof(test_rom_data);
+
+    RomDriverInstance* previous_rom = active_rom;
+    active_rom = &test_rom;
 
     bool is_erased = false;
-    ASSERT_EQ(LIBPARAMS_OK, is_params_erased(&is_erased));
-    EXPECT_TRUE(is_erased);
+    const int8_t erased_status = is_params_erased(&is_erased);
+    const bool all_ff_is_erased = is_erased;
 
-    stored_data[127] = 0x00;
-    romBeginWrite(&rom);
-    ASSERT_EQ(sizeof(stored_data),
-              romWrite(&rom, 0, stored_data, sizeof(stored_data)));
-    romEndWrite(&rom);
+    test_rom_data[127] = 0x00;
+    const int8_t programmed_status = is_params_erased(&is_erased);
+    const bool programmed_is_erased = is_erased;
 
-    ASSERT_EQ(LIBPARAMS_OK, is_params_erased(&is_erased));
-    EXPECT_FALSE(is_erased);
+    test_rom_data[127] = 0xFF;
+    test_rom_data[256] = 0x00;
+    const int8_t outside_status = is_params_erased(&is_erased);
+    const bool outside_is_erased = is_erased;
 
-    stored_data[127] = 0xFF;
-    stored_data[256] = 0x00;
-    romBeginWrite(&rom);
-    ASSERT_EQ(sizeof(stored_data),
-              romWrite(&rom, 0, stored_data, sizeof(stored_data)));
-    romEndWrite(&rom);
+    active_rom = previous_rom;
 
-    ASSERT_EQ(LIBPARAMS_OK, is_params_erased(&is_erased));
-    EXPECT_TRUE(is_erased);
+    EXPECT_EQ(LIBPARAMS_OK, erased_status);
+    EXPECT_TRUE(all_ff_is_erased);
+    EXPECT_EQ(LIBPARAMS_OK, programmed_status);
+    EXPECT_FALSE(programmed_is_erased);
+    EXPECT_EQ(LIBPARAMS_OK, outside_status);
+    EXPECT_TRUE(outside_is_erased);
 }
 
 TEST_F(SinglePageStorageDriverTest, detectErasedParamsInShortStorage) {
-    uint8_t stored_data[16];
-    memset(stored_data, 0xFF, sizeof(stored_data));
+    memset(test_rom_data, 0xFF, sizeof(test_rom_data));
 
-    romBeginWrite(&rom);
-    ASSERT_EQ(sizeof(stored_data),
-              romWrite(&rom, 0, stored_data, sizeof(stored_data)));
-    romEndWrite(&rom);
-
+    FlashDriverOps test_flash_ops = *active_rom->flash;
+    test_flash_ops.read = testRomRead;
     RomDriverInstance short_rom = *active_rom;
-    short_rom.total_size = sizeof(stored_data);
+    short_rom.flash = &test_flash_ops;
+    short_rom.first_page_idx = 0U;
+    short_rom.total_size = 16U;
+
     RomDriverInstance* full_rom = active_rom;
     active_rom = &short_rom;
 
