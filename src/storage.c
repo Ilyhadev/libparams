@@ -212,8 +212,13 @@ int8_t paramsResetToDefault() {
             integer_values_pool[idx] = integer_desc_pool[idx].def;
         }
     }
+    
+    for (ParamIndex_t idx = 0; idx < strings_amount; ++idx) {
+        memcpy(string_values_pool[idx],
+               string_desc_pool[idx].def,
+               MAX_STRING_LENGTH);
+    }
 
-    memset(string_values_pool, 0x00, STR_POOL_SIZE);
     return LIBPARAMS_OK;
 }
 
