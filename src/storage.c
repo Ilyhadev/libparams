@@ -344,7 +344,7 @@ int8_t is_params_erased(bool* is_erased) {
 
     for (uint32_t offset = 0; offset < check_size; offset += sizeof(rom_data)) {
         size_t received_len = romRead(active_rom, offset,
-                rom_data, sizeof(rom_data));
+                                      rom_data, sizeof(rom_data));
         for (uint8_t i = 0; i < received_len; i++) {
             if (rom_data[i] != 0xFF) {
                 *is_erased = false;
@@ -361,7 +361,7 @@ int8_t is_params_erased(bool* is_erased) {
         }
     }
     *is_erased = true;
-    
+
     return LIBPARAMS_OK;
 }
 

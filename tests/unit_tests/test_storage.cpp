@@ -78,7 +78,8 @@ protected:
 // Test Case 1: Initialization of Parameters
 // Test 1.1: Initialize with Valid Inputs
 TEST_F(EmptyStorageDriverTest, initializeWithValidInput) {
-    ASSERT_EQ(LIBPARAMS_OK, paramsInit(ubuntuFlashGetOps(), INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, -1, 1));
+    ASSERT_EQ(LIBPARAMS_OK, paramsInit(ubuntuFlashGetOps(), INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT,
+                                       -1, 1));
 }
 // Test 1.2: Initialize with zero params
 TEST_F(EmptyStorageDriverTest, initializeWithZeroParams) {
@@ -90,15 +91,18 @@ TEST_F(EmptyStorageDriverTest, initializeWithTooMuchParams) {
 }
 // Test 1.4: Initialize with Zero Pages
 TEST_F(EmptyStorageDriverTest, initializeZeroPages) {
-    ASSERT_EQ(LIBPARAMS_UNKNOWN_ERROR, paramsInit(ubuntuFlashGetOps(), INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, 0, 0));
+    ASSERT_EQ(LIBPARAMS_UNKNOWN_ERROR, paramsInit(ubuntuFlashGetOps(), INTEGER_PARAMS_AMOUNT,
+                                                  STRING_PARAMS_AMOUNT, 0, 0));
 }
 // Test 1.5: Initialize with Invalid Page Index
 TEST_F(EmptyStorageDriverTest, initializeWithInvalidaPageIndex) {
-    ASSERT_EQ(LIBPARAMS_UNKNOWN_ERROR, paramsInit(ubuntuFlashGetOps(), INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, -1, 2));
+    ASSERT_EQ(LIBPARAMS_UNKNOWN_ERROR, paramsInit(ubuntuFlashGetOps(), INTEGER_PARAMS_AMOUNT,
+                                                  STRING_PARAMS_AMOUNT, -1, 2));
 }
 // Test 1.6: Initialize with null flash ops
 TEST_F(EmptyStorageDriverTest, initializeWithNullFlashOps) {
-    ASSERT_EQ(LIBPARAMS_WRONG_ARGS, paramsInit(nullptr, INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, -1, 1));
+    ASSERT_EQ(LIBPARAMS_WRONG_ARGS, paramsInit(nullptr, INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, -1,
+                                               1));
 }
 
 // Test Case 2: Load Parameters
@@ -173,7 +177,8 @@ TEST_F(EmptyStorageDriverTest, loadParametersSuccessfully) {
 // Test 3.1: Save Parameters Successfully
 TEST_F(EmptyStorageDriverTest, saveParametersSuccessfully) {
     // Normal
-    ASSERT_EQ(LIBPARAMS_OK, paramsInit(ubuntuFlashGetOps(), INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT, -1, 1));
+    ASSERT_EQ(LIBPARAMS_OK, paramsInit(ubuntuFlashGetOps(), INTEGER_PARAMS_AMOUNT, STRING_PARAMS_AMOUNT,
+                                       -1, 1));
     ASSERT_EQ(LIBPARAMS_OK, paramsSave());
 
     // Zero integers is ok
