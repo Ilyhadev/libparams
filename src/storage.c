@@ -333,7 +333,7 @@ const StringDesc_t* paramsGetStringDesc(ParamIndex_t param_idx) {
 
     return &string_desc_pool[param_idx];
 }
-int8_t is_params_erased(bool* is_erased) {
+int8_t paramsIsErased(bool* is_erased) {
     if (active_rom == NULL || is_erased == NULL) {
         return LIBPARAMS_NOT_INITIALIZED;
     }

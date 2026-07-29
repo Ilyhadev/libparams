@@ -259,16 +259,16 @@ TEST_F(SinglePageStorageDriverTest, detectErasedParamsInFirst256Bytes) {
     active_rom = &test_rom;
 
     bool is_erased = false;
-    const int8_t erased_status = is_params_erased(&is_erased);
+    const int8_t erased_status = paramsIsErased(&is_erased);
     const bool all_ff_is_erased = is_erased;
 
     test_rom_data[127] = 0x00;
-    const int8_t programmed_status = is_params_erased(&is_erased);
+    const int8_t programmed_status = paramsIsErased(&is_erased);
     const bool programmed_is_erased = is_erased;
 
     test_rom_data[127] = 0xFF;
     test_rom_data[256] = 0x00;
-    const int8_t outside_status = is_params_erased(&is_erased);
+    const int8_t outside_status = paramsIsErased(&is_erased);
     const bool outside_is_erased = is_erased;
 
     active_rom = previous_rom;
@@ -295,7 +295,7 @@ TEST_F(SinglePageStorageDriverTest, detectErasedParamsInShortStorage) {
     active_rom = &short_rom;
 
     bool is_erased = false;
-    const int8_t status = is_params_erased(&is_erased);
+    const int8_t status = paramsIsErased(&is_erased);
     active_rom = full_rom;
 
     EXPECT_EQ(LIBPARAMS_OK, status);
