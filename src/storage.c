@@ -149,8 +149,6 @@ int8_t paramsLoad() {
         // 255 value is default value for stm32, '\0' for ubuntu
         if (string_values_pool[idx][0] == 255 || string_values_pool[idx][0] == '\0') {
             memcpy(string_values_pool[idx], string_desc_pool[idx].def, MAX_STRING_LENGTH);
-        } else {
-            break;
         }
     }
 
@@ -213,7 +211,12 @@ int8_t paramsResetToDefault() {
         }
     }
 
-    memset(string_values_pool, 0x00, STR_POOL_SIZE);
+    for (ParamIndex_t idx = 0; idx < strings_amount; ++idx) {
+        memcpy(string_values_pool[idx],
+               string_desc_pool[idx].def,
+               MAX_STRING_LENGTH);
+    }
+
     return LIBPARAMS_OK;
 }
 
@@ -329,6 +332,37 @@ const StringDesc_t* paramsGetStringDesc(ParamIndex_t param_idx) {
     param_idx -= integers_amount;
 
     return &string_desc_pool[param_idx];
+}
+int8_t paramsIsErased(bool* is_erased) {
+    if (active_rom == NULL || is_erased == NULL) {
+        return LIBPARAMS_NOT_INITIALIZED;
+    }
+
+    uint8_t rom_data[64];
+    const uint32_t check_size = 256;
+    *is_erased = false;
+
+    for (uint32_t offset = 0; offset < check_size; offset += sizeof(rom_data)) {
+        size_t received_len = romRead(active_rom, offset,
+                                      rom_data, sizeof(rom_data));
+        for (uint8_t i = 0; i < received_len; i++) {
+            if (rom_data[i] != 0xFF) {
+                *is_erased = false;
+                return LIBPARAMS_OK;
+            }
+        }
+        // Means that we reached maximum of memory
+        if (received_len != sizeof(rom_data)) {
+            if ((size_t)offset + received_len < romGetAvailableMemory(active_rom)) {
+                return LIBPARAMS_UNKNOWN_HAL_ERROR;
+            }
+            *is_erased = true;
+            return LIBPARAMS_OK;
+        }
+    }
+    *is_erased = true;
+
+    return LIBPARAMS_OK;
 }
 
 /************************************ PRIVATE FUNCTIONS AREA *************************************/
